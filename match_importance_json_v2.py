@@ -234,6 +234,7 @@ def match_importance_from_json(json_path: str, season: str, current_round: int, 
     z = last5_form_zscores(df_hist, teams)
     form_bonus = {t: form_coeff * z[t] for t in teams}
 
+    # 预计算历史积分和净胜球
     hist_table = compute_standings(df_hist, teams)
     hist_points = dict(zip(hist_table["team"], hist_table["points"]))
     hist_gd = dict(zip(hist_table["team"], hist_table["gd"]))
@@ -260,6 +261,7 @@ def match_importance_from_json(json_path: str, season: str, current_round: int, 
         p_h, p_d, p_a = wl_probabilities(ediff, base_draw, decay)
 
         def simulate_with_forced_result(forced_outcome, h, a):
+            # 复制预计算的数据
             forced_elo = elo_init.copy()
             forced_points = hist_points.copy()
             forced_gd = hist_gd.copy()
@@ -279,10 +281,13 @@ def match_importance_from_json(json_path: str, season: str, current_round: int, 
                 forced_points[h] += 1
                 forced_points[a] += 1
             
+            # 更新Elo
             forced_elo = update_elo(forced_elo, {"home":h,"away":a,"home_goals":hg,"away_goals":ag}, k=k_elo, home_adv=home_adv)
             
+            # 从未来比赛中移除这场已确定的比赛
             new_future = df_future[~((df_future["home"]==h) & (df_future["away"]==a) & (df_future["round"]==m["round"]))].copy()
             
+            # 使用更新后的数据运行仿真
             prob_forced, _ = simulate_season(
                 new_future, teams, relegation_slots, forced_elo, forced_points, forced_gd,
                 n_sims=n_sims, k_elo=k_elo, home_adv=home_adv,
@@ -374,6 +379,7 @@ def main():
     rank_df.to_csv("rank_distribution.csv", index=False, encoding="utf-8-sig")
     rank_df.to_json("rank_distribution.json", orient="records", force_ascii=False, indent=2)
 
+    # 输出Elo分数
     elo_df = pd.DataFrame(list(elo_scores.items()), columns=["team", "elo"])
     elo_df.sort_values(by="elo", ascending=False, inplace=True)
     elo_df.to_csv("elo_scores.csv", index=False, encoding="utf-8-sig")

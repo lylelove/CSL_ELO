@@ -4,18 +4,20 @@ import json
 def fetch_matches():
     grouped_matches = {}
     
-    # 循环获取 1 到 30 轮的数据
+    # 循环获取 gameweek 1 到 30 的数据
     for gameweek in range(1, 31):
         url = f"https://sport-data.dongqiudi.com/soccer/biz/data/schedule?season_id=23540&round_id=348912&gameweek={gameweek}"
         try:
             response = requests.get(url)
-            response.raise_for_status()
+            response.raise_for_status()  # 检查请求是否成功
             
             data = response.json()
             
+            # 提取 content.matches 部分
             if 'content' in data and 'matches' in data['content']:
                 matches = data['content']['matches']
                 
+                # 提取需要的字段并添加到当前轮次的列表中
                 simplified_matches = []
                 for match in matches:
                     simplified_match = {
@@ -36,6 +38,7 @@ def fetch_matches():
         except json.JSONDecodeError as e:
             print(f"解析第 {gameweek} 轮JSON数据时出错: {e}")
     
+    # 将分组后的比赛数据保存到 JSON 文件中
     with open('matches.json', 'w', encoding='utf-8') as f:
         json.dump(grouped_matches, f, ensure_ascii=False, indent=2)
     
